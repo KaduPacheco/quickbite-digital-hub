@@ -1,0 +1,85 @@
+import { Product } from "@/components/ProductCard";
+import { Category } from "@/components/CategoryFilter";
+
+export const categories: Category[] = [
+  { id: "burgers", name: "Hambúrgueres", icon: "🍔" },
+  { id: "pizzas", name: "Pizzas", icon: "🍕" },
+  { id: "drinks", name: "Bebidas", icon: "🥤" },
+  { id: "desserts", name: "Sobremesas", icon: "🍰" },
+  { id: "snacks", name: "Petiscos", icon: "🍟" },
+];
+
+export const products: Product[] = [
+  {
+    id: "1",
+    name: "Big Burger Clássico",
+    description: "Hamburger artesanal com carne bovina, queijo cheddar, alface, tomate e molho especial",
+    price: 28.90,
+    image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&h=400&fit=crop",
+    category: "burgers",
+    available: true,
+  },
+  {
+    id: "2", 
+    name: "Pizza Margherita",
+    description: "Pizza tradicional com molho de tomate, mozzarella fresca, manjericão e azeite",
+    price: 35.90,
+    image: "https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400&h=400&fit=crop",
+    category: "pizzas",
+    available: true,
+  },
+  {
+    id: "3",
+    name: "Refrigerante Cola",
+    description: "Refrigerante gelado 350ml",
+    price: 5.90,
+    image: "https://images.unsplash.com/photo-1624517452488-04869289c4ca?w=400&h=400&fit=crop",
+    category: "drinks",
+    available: true,
+  },
+  {
+    id: "4",
+    name: "Batata Frita Premium",
+    description: "Batata frita crocante com temperos especiais e molho de queijo",
+    price: 18.90,
+    image: "https://images.unsplash.com/photo-1576107232684-1279f390859f?w=400&h=400&fit=crop",
+    category: "snacks",
+    available: true,
+  },
+  {
+    id: "5",
+    name: "Brownie de Chocolate",
+    description: "Brownie artesanal com chocolate belga e nozes",
+    price: 15.90,
+    image: "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?w=400&h=400&fit=crop",
+    category: "desserts",
+    available: true,
+  },
+  {
+    id: "6",
+    name: "Burger Vegano",
+    description: "Hambúrguer plant-based com queijo vegano, alface e tomate",
+    price: 32.90,
+    image: "https://images.unsplash.com/photo-1525059696034-4967a729002e?w=400&h=400&fit=crop",
+    category: "burgers",
+    available: true,
+  },
+  {
+    id: "7",
+    name: "Pizza Pepperoni",
+    description: "Pizza com molho de tomate, mozzarella e pepperoni artesanal",
+    price: 42.90,
+    image: "https://images.unsplash.com/photo-1628840042765-356cda07504e?w=400&h=400&fit=crop",
+    category: "pizzas",
+    available: false,
+  },
+  {
+    id: "8",
+    name: "Suco Natural de Laranja",
+    description: "Suco natural de laranja 400ml",
+    price: 8.90,
+    image: "https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?w=400&h=400&fit=crop",
+    category: "drinks",
+    available: true,
+  },
+];
