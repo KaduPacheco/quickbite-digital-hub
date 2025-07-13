@@ -31,11 +31,11 @@ interface ProductModalProps {
 export const ProductModal = ({ product, isOpen, onClose, onAddToCart }: ProductModalProps) => {
   const [quantity, setQuantity] = useState(1);
   const [selectedVariation, setSelectedVariation] = useState<ProductVariation | null>(
-    product.variations?.[0] || null
+    product?.variations?.[0] || null
   );
   const [selectedAdditionals, setSelectedAdditionals] = useState<ProductAdditional[]>([]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !product) return null;
 
   const handleAdditionalToggle = (additional: ProductAdditional) => {
     setSelectedAdditionals(prev => {
