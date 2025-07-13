@@ -1,3 +1,4 @@
+
 import { Plus, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,12 +19,13 @@ interface ProductCardProps {
   quantity: number;
   onAddToCart: (product: Product) => void;
   onRemoveFromCart: (product: Product) => void;
+  onProductClick: (product: Product) => void;
 }
 
-export const ProductCard = ({ product, quantity, onAddToCart, onRemoveFromCart }: ProductCardProps) => {
+export const ProductCard = ({ product, quantity, onAddToCart, onRemoveFromCart, onProductClick }: ProductCardProps) => {
   return (
-    <Card className="group overflow-hidden transition-all duration-300 hover:shadow-medium hover:-translate-y-1">
-      <div className="relative aspect-square overflow-hidden">
+    <Card className="group overflow-hidden transition-all duration-300 hover:shadow-medium hover:-translate-y-1 cursor-pointer">
+      <div className="relative aspect-square overflow-hidden" onClick={() => onProductClick(product)}>
         <img
           src={product.image}
           alt={product.name}
@@ -38,12 +40,14 @@ export const ProductCard = ({ product, quantity, onAddToCart, onRemoveFromCart }
       
       <CardContent className="p-4">
         <div className="space-y-2">
-          <h3 className="font-semibold text-lg leading-tight">{product.name}</h3>
-          <p className="text-muted-foreground text-sm line-clamp-2">{product.description}</p>
+          <div onClick={() => onProductClick(product)}>
+            <h3 className="font-semibold text-lg leading-tight">{product.name}</h3>
+            <p className="text-muted-foreground text-sm line-clamp-2">{product.description}</p>
+          </div>
           
           <div className="flex items-center justify-between pt-2">
             <span className="text-xl font-bold text-primary">
-              R$ {product.price.toFixed(2)}
+              A partir de R$ {product.price.toFixed(2)}
             </span>
             
             {product.available && (
@@ -54,7 +58,10 @@ export const ProductCard = ({ product, quantity, onAddToCart, onRemoveFromCart }
                       size="icon"
                       variant="ghost"
                       className="h-8 w-8 rounded-full hover:bg-primary hover:text-primary-foreground"
-                      onClick={() => onRemoveFromCart(product)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRemoveFromCart(product);
+                      }}
                     >
                       <Minus className="h-4 w-4" />
                     </Button>
@@ -67,7 +74,10 @@ export const ProductCard = ({ product, quantity, onAddToCart, onRemoveFromCart }
                       size="icon"
                       variant="ghost"
                       className="h-8 w-8 rounded-full hover:bg-primary hover:text-primary-foreground"
-                      onClick={() => onAddToCart(product)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onAddToCart(product);
+                      }}
                     >
                       <Plus className="h-4 w-4" />
                     </Button>
@@ -76,7 +86,10 @@ export const ProductCard = ({ product, quantity, onAddToCart, onRemoveFromCart }
                   <Button
                     size="sm"
                     className="rounded-full px-4"
-                    onClick={() => onAddToCart(product)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onProductClick(product);
+                    }}
                   >
                     <Plus className="h-4 w-4 mr-1" />
                     Adicionar
