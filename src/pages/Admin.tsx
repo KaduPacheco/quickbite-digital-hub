@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { LogOut, Package, ShoppingCart, BarChart3, Settings } from "lucide-react";
+import { LogOut, Package, ShoppingCart, BarChart3, Settings, Users, TrendingUp, Tag, Warehouse } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardStats } from "@/components/admin/DashboardStats";
 import { ProductManagement } from "@/components/admin/ProductManagement";
 import { OrderManagement } from "@/components/admin/OrderManagement";
+import { InventoryManagement } from "@/components/admin/InventoryManagement";
+import { PromotionsManagement } from "@/components/admin/PromotionsManagement";
+import { ReportsManagement } from "@/components/admin/ReportsManagement";
+import { CustomerManagement } from "@/components/admin/CustomerManagement";
 import { AdminLogin } from "@/pages/AdminLogin";
 
 const Admin = () => {
@@ -48,7 +52,7 @@ const Admin = () => {
 
       <main className="container px-4 py-6">
         <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 lg:w-[600px]">
+          <TabsList className="grid w-full grid-cols-7 lg:w-[800px]">
             <TabsTrigger value="dashboard" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
               Dashboard
@@ -61,9 +65,21 @@ const Admin = () => {
               <Package className="h-4 w-4" />
               Produtos
             </TabsTrigger>
-            <TabsTrigger value="settings" className="flex items-center gap-2">
-              <Settings className="h-4 w-4" />
-              Configurações
+            <TabsTrigger value="inventory" className="flex items-center gap-2">
+              <Warehouse className="h-4 w-4" />
+              Estoque
+            </TabsTrigger>
+            <TabsTrigger value="promotions" className="flex items-center gap-2">
+              <Tag className="h-4 w-4" />
+              Promoções
+            </TabsTrigger>
+            <TabsTrigger value="reports" className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
+              Relatórios
+            </TabsTrigger>
+            <TabsTrigger value="customers" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Clientes
             </TabsTrigger>
           </TabsList>
 
@@ -167,49 +183,51 @@ const Admin = () => {
             </div>
           </TabsContent>
 
-          <TabsContent value="settings">
+          <TabsContent value="inventory">
             <div className="space-y-6">
               <div>
-                <h2 className="text-2xl font-bold mb-2">Configurações</h2>
+                <h2 className="text-2xl font-bold mb-2">Controle de Estoque</h2>
                 <p className="text-muted-foreground">
-                  Configure as opções da sua lanchonete
+                  Gerencie o estoque dos ingredientes e receba alertas de baixo estoque
                 </p>
               </div>
-              
-              <Card>
-                <CardHeader>
-                  <CardTitle>Dados da Lanchonete</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-sm font-medium">Nome da Lanchonete</label>
-                      <input 
-                        type="text" 
-                        defaultValue="DeliciousEats"
-                        className="w-full mt-1 p-2 border border-input rounded-md"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">Endereço</label>
-                      <input 
-                        type="text" 
-                        defaultValue="Rua das Delícias, 123"
-                        className="w-full mt-1 p-2 border border-input rounded-md"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">Telefone</label>
-                      <input 
-                        type="text" 
-                        defaultValue="(11) 99999-9999"
-                        className="w-full mt-1 p-2 border border-input rounded-md"
-                      />
-                    </div>
-                    <Button>Salvar Alterações</Button>
-                  </div>
-                </CardContent>
-              </Card>
+              <InventoryManagement />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="promotions">
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-2xl font-bold mb-2">Gerenciamento de Promoções</h2>
+                <p className="text-muted-foreground">
+                  Crie e gerencie cupons de desconto para seus clientes
+                </p>
+              </div>
+              <PromotionsManagement />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="reports">
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-2xl font-bold mb-2">Relatórios de Vendas</h2>
+                <p className="text-muted-foreground">
+                  Analise o desempenho das suas vendas com relatórios detalhados
+                </p>
+              </div>
+              <ReportsManagement />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="customers">
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-2xl font-bold mb-2">Gerenciamento de Clientes</h2>
+                <p className="text-muted-foreground">
+                  Visualize informações e histórico dos seus clientes
+                </p>
+              </div>
+              <CustomerManagement />
             </div>
           </TabsContent>
         </Tabs>

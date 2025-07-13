@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { ArrowLeft, MapPin, Clock, CreditCard } from "lucide-react";
+import { ArrowLeft, MapPin, Clock, CreditCard, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,18 @@ interface CheckoutProps {
   onClose: () => void;
   onOrderComplete: () => void;
 }
+
+interface Coupon {
+  code: string;
+  type: "percentage" | "fixed";
+  value: number;
+  minOrderValue: number;
+}
+
+const mockCoupons: Coupon[] = [
+  { code: "PRIMEIRA10", type: "percentage", value: 10, minOrderValue: 20 },
+  { code: "FRETE5", type: "fixed", value: 5, minOrderValue: 30 }
+];
 
 export const Checkout = ({ items, isOpen, onClose, onOrderComplete }: CheckoutProps) => {
   const [deliveryAddress, setDeliveryAddress] = useState({
@@ -31,13 +43,63 @@ export const Checkout = ({ items, isOpen, onClose, onOrderComplete }: CheckoutPr
   });
   const [paymentMethod, setPaymentMethod] = useState("pix");
   const [observations, setObservations] = useState("");
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
   const { toast } = useToast();
 
   if (!isOpen) return null;
 
   const subtotal = items.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
   const deliveryFee = 5.00;
-  const total = subtotal + deliveryFee;
+  
+  // Calcular desconto do cupom
+  let discount = 0;
+  if (appliedCoupon) {
+    if (appliedCoupon.type === "percentage") {
+      discount = subtotal * (appliedCoupon.value / 100);
+    } else {
+      discount = appliedCoupon.value;
+    }
+  }
+  
+  const total = subtotal + deliveryFee - discount;
+
+  const handleApplyCoupon = () => {
+    const coupon = mockCoupons.find(c => c.code.toUpperCase() === couponCode.toUpperCase());
+    
+    if (!coupon) {
+      toast({
+        title: "Cupom inválido",
+        description: "O código informado não existe ou expirou",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (subtotal < coupon.minOrderValue) {
+      toast({
+        title: "Valor mínimo não atingido",
+        description: `Este cupom é válido para pedidos acima de R$ ${coupon.minOrderValue.toFixed(2)}`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setAppliedCoupon(coupon);
+    toast({
+      title: "Cupom aplicado!",
+      description: `Desconto de ${coupon.type === "percentage" ? `${coupon.value}%` : `R$ ${coupon.value.toFixed(2)}`} aplicado`
+    });
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode("");
+    toast({
+      title: "Cupom removido",
+      description: "O desconto foi removido do seu pedido"
+    });
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -165,6 +227,42 @@ export const Checkout = ({ items, isOpen, onClose, onOrderComplete }: CheckoutPr
                   </CardContent>
                 </Card>
 
+                {/* Cupom de Desconto */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Tag className="h-5 w-5" />
+                      Cupom de Desconto
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {!appliedCoupon ? (
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Digite o código do cupom"
+                          value={couponCode}
+                          onChange={(e) => setCouponCode(e.target.value)}
+                        />
+                        <Button type="button" onClick={handleApplyCoupon}>
+                          Aplicar
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between p-3 bg-success/10 border border-success/20 rounded-lg">
+                        <div>
+                          <p className="font-medium text-success">Cupom aplicado: {appliedCoupon.code}</p>
+                          <p className="text-sm text-success/80">
+                            Desconto: {appliedCoupon.type === "percentage" ? `${appliedCoupon.value}%` : `R$ ${appliedCoupon.value.toFixed(2)}`}
+                          </p>
+                        </div>
+                        <Button variant="outline" size="sm" onClick={handleRemoveCoupon}>
+                          Remover
+                        </Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
                 {/* Forma de Pagamento */}
                 <Card>
                   <CardHeader>
@@ -241,6 +339,12 @@ export const Checkout = ({ items, isOpen, onClose, onOrderComplete }: CheckoutPr
                         <span>Taxa de entrega</span>
                         <span>R$ {deliveryFee.toFixed(2)}</span>
                       </div>
+                      {appliedCoupon && (
+                        <div className="flex justify-between text-success">
+                          <span>Desconto ({appliedCoupon.code})</span>
+                          <span>-R$ {discount.toFixed(2)}</span>
+                        </div>
+                      )}
                       <div className="flex justify-between font-bold text-lg">
                         <span>Total</span>
                         <span className="text-primary">R$ {total.toFixed(2)}</span>
