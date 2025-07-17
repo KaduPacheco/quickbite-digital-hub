@@ -1,7 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { Product } from '@/components/ProductCard';
-import { CartItem } from '@/components/Cart';
+import { Product } from '@/types/schema';
+import { CartItem } from '@/types/schema';
 
 export interface DbCartItem {
   id: string;
@@ -84,7 +84,7 @@ export const saveCart = async (
     // Then insert new items
     const { error } = await supabase
       .from('cart_items')
-      .insert(cartItemsToDbFormat(items, userId));
+      .insert(cartItemsToDbFormat(items, userId) as any[]);
     
     if (error) throw error;
     

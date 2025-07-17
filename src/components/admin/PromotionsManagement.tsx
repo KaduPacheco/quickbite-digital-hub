@@ -15,6 +15,7 @@ import {
   useSupabaseDelete 
 } from "@/hooks/useSupabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Promotion {
   id: string;

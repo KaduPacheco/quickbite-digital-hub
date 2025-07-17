@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { RealtimeChannel } from '@supabase/supabase-js';
+import { RealtimeChannel, User, Session } from '@supabase/supabase-js';
 
 // Generic hook for Supabase queries
 export const useSupabaseQuery = <T extends any>(
@@ -99,7 +99,7 @@ export const useSupabaseSubscription = <T extends any>(
 };
 
 // Hook for inserting data into Supabase
-export const useSupabaseInsert = <T extends any>(
+export const useSupabaseInsert = <T extends Record<string, any>>(
   table: string
 ) => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -113,7 +113,7 @@ export const useSupabaseInsert = <T extends any>(
     try {
       const { data: result, error } = await supabase
         .from(table)
-        .insert(data)
+        .insert(data as any)
         .select();
 
       if (error) throw error;
@@ -142,7 +142,7 @@ export const useSupabaseInsert = <T extends any>(
 };
 
 // Hook for updating data in Supabase
-export const useSupabaseUpdate = <T extends any>(
+export const useSupabaseUpdate = <T extends Record<string, any>>(
   table: string
 ) => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -156,7 +156,7 @@ export const useSupabaseUpdate = <T extends any>(
     try {
       const { data: result, error } = await supabase
         .from(table)
-        .update(data)
+        .update(data as any)
         .eq('id', id)
         .select();
 
@@ -230,8 +230,8 @@ export const useSupabaseDelete = (
 
 // Hook for user authentication state
 export const useAuth = () => {
-  const [user, setUser] = useState(supabase.auth.getUser());
-  const [session, setSession] = useState(supabase.auth.getSession());
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

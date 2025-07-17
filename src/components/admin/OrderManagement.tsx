@@ -15,6 +15,7 @@ import { Clock, Package, Truck, CheckCircle, AlertCircle, Loader2 } from "lucide
 import { useToast } from "@/hooks/use-toast";
 import { useSupabaseQuery, useSupabaseUpdate, useSupabaseSubscription } from "@/hooks/useSupabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 interface OrderItem {
   id: string;
@@ -195,8 +196,6 @@ export const OrderManagement = () => {
 
   // Calculate estimated time based on status
   const getEstimatedTime = (order: Order) => {
-    const baseTime = 45; // Base time in minutes
-    
     switch(order.status) {
       case 'recebido': return '40-50 min';
       case 'preparo': return '25-35 min';

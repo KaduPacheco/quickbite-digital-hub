@@ -206,7 +206,7 @@ const Index = () => {
         );
       }
       
-      return [...prev, { product: customizedProduct, quantity }];
+      return [...prev, { product: customizedProduct, quantity, variations: { selectedVariation, selectedAdditionals } }];
     });
 
     toast({
@@ -265,7 +265,7 @@ const Index = () => {
         produto_id: item.product.id,
         quantidade: item.quantity,
         preco_unitario: item.product.price,
-        variacoes: item.product.variations || null
+        variacoes: item.variations || null
       }));
       
       const { error: itemsError } = await supabase
