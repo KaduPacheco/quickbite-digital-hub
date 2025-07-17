@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, StorefrontIcon } from "lucide-react";
+import { Loader2, Store } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from '@/integrations/supabase/client';
 
@@ -134,7 +134,7 @@ export function LanchoneteAssociationForm({ onSuccess, onCancel }: LanchoneteAss
               </>
             ) : (
               <>
-                <StorefrontIcon className="mr-2 h-4 w-4" />
+                <Store className="mr-2 h-4 w-4" />
                 Associar Lanchonete
               </>
             )}
