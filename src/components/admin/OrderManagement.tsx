@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,69 +11,33 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Clock, Package, Truck, CheckCircle, AlertCircle } from "lucide-react";
+import { Clock, Package, Truck, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useSupabaseQuery, useSupabaseUpdate, useSupabaseSubscription } from "@/hooks/useSupabase";
+import { useAuth } from "@/contexts/AuthContext";
+
+interface OrderItem {
+  id: string;
+  pedido_id: string;
+  produto_id: string;
+  quantidade: number;
+  preco_unitario: number;
+  variacoes: any;
+}
 
 interface Order {
   id: string;
-  customerName: string;
-  customerPhone: string;
-  address: string;
-  items: Array<{
-    name: string;
-    quantity: number;
-    price: number;
-  }>;
+  cliente: {
+    nome: string;
+    telefone: string;
+  } | null;
+  endereco_entrega: string;
+  items: OrderItem[];
   total: number;
   status: "recebido" | "preparo" | "em_rota" | "entregue";
-  createdAt: string;
-  estimatedTime?: string;
+  created_at: string;
+  lanchonete_id: string;
 }
-
-const mockOrders: Order[] = [
-  {
-    id: "1",
-    customerName: "João Silva",
-    customerPhone: "(11) 99999-9999",
-    address: "Rua das Flores, 123 - Centro",
-    items: [
-      { name: "Big Burger Clássico", quantity: 1, price: 25.90 },
-      { name: "Batata Frita Premium", quantity: 1, price: 18.90 },
-    ],
-    total: 47.80,
-    status: "preparo",
-    createdAt: "2024-01-15 14:30",
-    estimatedTime: "30-40 min"
-  },
-  {
-    id: "2",
-    customerName: "Maria Santos",
-    customerPhone: "(11) 88888-8888",
-    address: "Av. Principal, 456 - Jardim",
-    items: [
-      { name: "Pizza Margherita", quantity: 1, price: 35.90 },
-      { name: "Refrigerante Cola", quantity: 1, price: 5.90 },
-    ],
-    total: 41.80,
-    status: "recebido",
-    createdAt: "2024-01-15 14:25",
-    estimatedTime: "45-55 min"
-  },
-  {
-    id: "3",
-    customerName: "Pedro Costa",
-    customerPhone: "(11) 77777-7777",
-    address: "Rua Nova, 789 - Vila Verde",
-    items: [
-      { name: "Burger Vegano", quantity: 1, price: 28.90 },
-      { name: "Suco Natural", quantity: 1, price: 12.90 },
-    ],
-    total: 41.80,
-    status: "em_rota",
-    createdAt: "2024-01-15 14:15",
-    estimatedTime: "15-25 min"
-  }
-];
 
 const statusConfig = {
   recebido: {
@@ -103,24 +67,170 @@ const statusConfig = {
 };
 
 export const OrderManagement = () => {
-  const [orders, setOrders] = useState<Order[]>(mockOrders);
   const { toast } = useToast();
+  const { lanchoneteId } = useAuth();
+  const [orders, setOrders] = useState<Order[]>([]);
 
-  const updateOrderStatus = (orderId: string, newStatus: Order['status']) => {
-    setOrders(prev => prev.map(order => 
-      order.id === orderId ? { ...order, status: newStatus } : order
-    ));
-    
-    toast({
-      title: "Status atualizado",
-      description: `Pedido #${orderId} marcado como ${statusConfig[newStatus].label.toLowerCase()}`,
-    });
+  // Fetch orders from Supabase
+  const { data: ordersData, isLoading, error, refetch } = useSupabaseQuery<any[]>(
+    async () => {
+      if (!lanchoneteId) return { data: null, error: new Error("Lanchonete ID not found") };
+      
+      const { data, error } = await supabase
+        .from('pedidos')
+        .select(`
+          id, 
+          total, 
+          status, 
+          endereco_entrega, 
+          created_at,
+          lanchonete_id,
+          cliente:cliente_id (
+            nome,
+            telefone
+          ),
+          items:itens_pedido (
+            id,
+            pedido_id,
+            produto_id,
+            quantidade,
+            preco_unitario,
+            variacoes
+          )
+        `)
+        .eq('lanchonete_id', lanchoneteId)
+        .order('created_at', { ascending: false });
+        
+      return { data, error };
+    },
+    [lanchoneteId]
+  );
+
+  // Update orders state when data changes
+  useEffect(() => {
+    if (ordersData) {
+      setOrders(ordersData);
+    }
+  }, [ordersData]);
+
+  // Hook for updating order status
+  const { update: updateOrder, isLoading: isUpdating } = useSupabaseUpdate('pedidos');
+
+  // Subscribe to order changes
+  useSupabaseSubscription(
+    'pedidos',
+    (payload) => {
+      console.log('Real-time order update:', payload);
+      
+      // Handle different types of updates
+      if (payload.eventType === 'INSERT') {
+        // New order added
+        const newOrder = payload.new as Order;
+        if (newOrder.lanchonete_id === lanchoneteId) {
+          setOrders(prev => [newOrder, ...prev]);
+          
+          // Show notification for new order
+          toast({
+            title: "Novo pedido recebido!",
+            description: `Pedido #${newOrder.id.substring(0, 8)} foi recebido.`,
+          });
+        }
+      } else if (payload.eventType === 'UPDATE') {
+        // Order updated
+        const updatedOrder = payload.new as Order;
+        if (updatedOrder.lanchonete_id === lanchoneteId) {
+          setOrders(prev => prev.map(order => 
+            order.id === updatedOrder.id ? updatedOrder : order
+          ));
+        }
+      } else if (payload.eventType === 'DELETE') {
+        // Order deleted
+        const deletedOrder = payload.old as Order;
+        setOrders(prev => prev.filter(order => order.id !== deletedOrder.id));
+      }
+    },
+    '*',
+    { column: 'lanchonete_id', value: lanchoneteId || '' }
+  );
+
+  const updateOrderStatus = async (orderId: string, newStatus: Order['status']) => {
+    try {
+      await updateOrder(orderId, { status: newStatus });
+      
+      // Optimistically update UI
+      setOrders(prev => prev.map(order => 
+        order.id === orderId ? { ...order, status: newStatus } : order
+      ));
+      
+      toast({
+        title: "Status atualizado",
+        description: `Pedido #${orderId.substring(0, 8)} marcado como ${statusConfig[newStatus].label.toLowerCase()}`,
+      });
+    } catch (error) {
+      console.error("Error updating order status:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar o status do pedido",
+        variant: "destructive",
+      });
+    }
   };
 
   const getStatusIcon = (status: Order['status']) => {
     const IconComponent = statusConfig[status].icon;
     return <IconComponent className="h-4 w-4" />;
   };
+
+  // Format order creation date
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(date);
+  };
+
+  // Calculate estimated time based on status
+  const getEstimatedTime = (order: Order) => {
+    const baseTime = 45; // Base time in minutes
+    
+    switch(order.status) {
+      case 'recebido': return '40-50 min';
+      case 'preparo': return '25-35 min';
+      case 'em_rota': return '10-15 min';
+      case 'entregue': return 'Entregue';
+      default: return '30-40 min';
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <Card className="w-full h-64 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Carregando pedidos...</p>
+        </div>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className="w-full p-6">
+        <div className="text-center py-8">
+          <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
+          <h3 className="text-lg font-semibold mb-2">Erro ao carregar pedidos</h3>
+          <p className="text-muted-foreground mb-4">
+            Não foi possível carregar os pedidos. Por favor, tente novamente.
+          </p>
+          <Button onClick={() => refetch()}>Tentar novamente</Button>
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -131,87 +241,101 @@ export const OrderManagement = () => {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Pedido</TableHead>
-                <TableHead>Cliente</TableHead>
-                <TableHead>Itens</TableHead>
-                <TableHead>Total</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Tempo</TableHead>
-                <TableHead>Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {orders.map((order) => (
-                <TableRow key={order.id}>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">#{order.id}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {order.createdAt}
-                      </div>
-                    </div>
-                  </TableCell>
-                  
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">{order.customerName}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {order.customerPhone}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {order.address}
-                      </div>
-                    </div>
-                  </TableCell>
-                  
-                  <TableCell>
-                    <div className="space-y-1">
-                      {order.items.map((item, index) => (
-                        <div key={index} className="text-sm">
-                          {item.quantity}x {item.name}
-                        </div>
-                      ))}
-                    </div>
-                  </TableCell>
-                  
-                  <TableCell className="font-semibold">
-                    R$ {order.total.toFixed(2)}
-                  </TableCell>
-                  
-                  <TableCell>
-                    <Badge className={statusConfig[order.status].color}>
-                      <div className="flex items-center gap-1">
-                        {getStatusIcon(order.status)}
-                        {statusConfig[order.status].label}
-                      </div>
-                    </Badge>
-                  </TableCell>
-                  
-                  <TableCell>
-                    <div className="text-sm text-muted-foreground">
-                      {order.estimatedTime}
-                    </div>
-                  </TableCell>
-                  
-                  <TableCell>
-                    {statusConfig[order.status].nextStatus && (
-                      <Button
-                        size="sm"
-                        onClick={() => updateOrderStatus(order.id, statusConfig[order.status].nextStatus!)}
-                      >
-                        Próximo Status
-                      </Button>
-                    )}
-                  </TableCell>
+        {orders.length === 0 ? (
+          <div className="text-center py-12">
+            <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Nenhum pedido encontrado</h3>
+            <p className="text-muted-foreground">
+              Não há pedidos registrados no momento.
+            </p>
+          </div>
+        ) : (
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Pedido</TableHead>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead>Itens</TableHead>
+                  <TableHead>Total</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Tempo</TableHead>
+                  <TableHead>Ações</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+              </TableHeader>
+              <TableBody>
+                {orders.map((order) => (
+                  <TableRow key={order.id}>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">#{order.id.substring(0, 8)}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {formatDate(order.created_at)}
+                        </div>
+                      </div>
+                    </TableCell>
+                    
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{order.cliente?.nome || "Cliente não identificado"}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {order.cliente?.telefone || "Sem telefone"}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {order.endereco_entrega}
+                        </div>
+                      </div>
+                    </TableCell>
+                    
+                    <TableCell>
+                      <div className="space-y-1">
+                        {order.items && order.items.map((item) => (
+                          <div key={item.id} className="text-sm">
+                            {item.quantidade}x {item.preco_unitario.toFixed(2)}
+                          </div>
+                        ))}
+                      </div>
+                    </TableCell>
+                    
+                    <TableCell className="font-semibold">
+                      R$ {order.total.toFixed(2)}
+                    </TableCell>
+                    
+                    <TableCell>
+                      <Badge className={statusConfig[order.status].color}>
+                        <div className="flex items-center gap-1">
+                          {getStatusIcon(order.status)}
+                          {statusConfig[order.status].label}
+                        </div>
+                      </Badge>
+                    </TableCell>
+                    
+                    <TableCell>
+                      <div className="text-sm text-muted-foreground">
+                        {getEstimatedTime(order)}
+                      </div>
+                    </TableCell>
+                    
+                    <TableCell>
+                      {statusConfig[order.status].nextStatus && (
+                        <Button
+                          size="sm"
+                          onClick={() => updateOrderStatus(order.id, statusConfig[order.status].nextStatus!)}
+                          disabled={isUpdating}
+                        >
+                          {isUpdating ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : null}
+                          Próximo Status
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

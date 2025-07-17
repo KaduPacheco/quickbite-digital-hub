@@ -1,9 +1,8 @@
 
-import { useState } from "react";
-import { LogOut, Package, ShoppingCart, BarChart3, Settings, Users, TrendingUp, Tag, Warehouse } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect } from "react";
+import { LogOut, Package, ShoppingCart, BarChart3, Settings, Users, TrendingUp, Tag, Warehouse, Loader2 } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardStats } from "@/components/admin/DashboardStats";
 import { ProductManagement } from "@/components/admin/ProductManagement";
@@ -13,20 +12,74 @@ import { PromotionsManagement } from "@/components/admin/PromotionsManagement";
 import { ReportsManagement } from "@/components/admin/ReportsManagement";
 import { CustomerManagement } from "@/components/admin/CustomerManagement";
 import { AdminLogin } from "@/pages/AdminLogin";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 const Admin = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { user, lanchoneteId, signOut, isLoading } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check authentication status
+    if (!isLoading) {
+      if (user) {
+        setIsAuthenticated(true);
+      } else {
+        setIsAuthenticated(false);
+      }
+    }
+  }, [user, isLoading]);
 
   const handleLogin = () => {
     setIsAuthenticated(true);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await signOut();
     setIsAuthenticated(false);
+    toast({
+      title: "Logout realizado",
+      description: "Você saiu do sistema com sucesso",
+    });
+    navigate("/");
   };
 
+  // Show loading state while checking authentication
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-warm flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          <p className="text-lg">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If not authenticated, show login page
   if (!isAuthenticated) {
     return <AdminLogin onLogin={handleLogin} />;
+  }
+
+  // If authenticated but no lanchoneteId, show access denied
+  if (!lanchoneteId) {
+    return (
+      <div className="min-h-screen bg-gradient-warm flex items-center justify-center p-4">
+        <Card className="max-w-md w-full p-6 text-center">
+          <CardContent className="pt-6 space-y-4">
+            <h2 className="text-2xl font-bold">Acesso Negado</h2>
+            <p>
+              Você não tem permissão para acessar o painel administrativo. 
+              Sua conta não está associada a nenhuma lanchonete.
+            </p>
+            <Button onClick={handleLogout}>Sair</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (
@@ -43,10 +96,15 @@ const Admin = () => {
             </div>
           </div>
           
-          <Button variant="outline" size="sm" onClick={handleLogout}>
-            <LogOut className="h-4 w-4 mr-2" />
-            Sair
-          </Button>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground mr-2">
+              {user?.email}
+            </span>
+            <Button variant="outline" size="sm" onClick={handleLogout}>
+              <LogOut className="h-4 w-4 mr-2" />
+              Sair
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -93,70 +151,7 @@ const Admin = () => {
             
             <DashboardStats />
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Pedidos Recentes</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {[
-                      { id: "1", customer: "João Silva", total: 47.80, status: "preparo" },
-                      { id: "2", customer: "Maria Santos", total: 41.80, status: "recebido" },
-                      { id: "3", customer: "Pedro Costa", total: 35.50, status: "em_rota" }
-                    ].map((order) => (
-                      <div key={order.id} className="flex items-center justify-between p-3 border border-border rounded-lg">
-                        <div>
-                          <p className="font-medium">#{order.id} - {order.customer}</p>
-                          <p className="text-sm text-muted-foreground">
-                            R$ {order.total.toFixed(2)}
-                          </p>
-                        </div>
-                        <Badge variant={
-                          order.status === "recebido" ? "secondary" :
-                          order.status === "preparo" ? "default" :
-                          order.status === "em_rota" ? "destructive" : "outline"
-                        }>
-                          {{
-                            recebido: "Recebido",
-                            preparo: "Preparo",
-                            em_rota: "Em Rota",
-                            entregue: "Entregue"
-                          }[order.status]}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Produtos Mais Vendidos</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {[
-                      { name: "Big Burger Clássico", sales: 24, revenue: 621.60 },
-                      { name: "Pizza Margherita", sales: 18, revenue: 646.20 },
-                      { name: "Batata Frita Premium", sales: 32, revenue: 604.80 }
-                    ].map((item, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 border border-border rounded-lg">
-                        <div>
-                          <p className="font-medium">{item.name}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {item.sales} vendidos
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-semibold">R$ {item.revenue.toFixed(2)}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            {/* Dashboard content would now use real data */}
           </TabsContent>
 
           <TabsContent value="orders">

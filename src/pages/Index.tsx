@@ -1,5 +1,5 @@
 
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Header } from "@/components/Header";
 import { CategoryFilter } from "@/components/CategoryFilter";
 import { ProductCard, Product } from "@/components/ProductCard";
@@ -7,8 +7,16 @@ import { Cart, CartItem } from "@/components/Cart";
 import { ProductModal } from "@/components/ProductModal";
 import { Checkout } from "@/components/Checkout";
 import { MobileCartFooter } from "@/components/MobileCartFooter";
-import { categories, products } from "@/data/mockData";
+import { categories as mockCategories } from "@/data/mockData";
 import { useToast } from "@/hooks/use-toast";
+import { useSupabaseQuery } from "@/hooks/useSupabase";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { loadCart, saveCart, clearCart, transferCartToUser } from "@/services/CartService";
+import { Loader2 } from "lucide-react";
+
+// Default lanchonete ID for demo purposes - in production, this would be set dynamically
+const DEFAULT_LANCHONETE_ID = "your-lanchonete-id-here";
 
 const Index = () => {
   const [activeCategory, setActiveCategory] = useState("all");
@@ -17,12 +25,124 @@ const Index = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
+
+  // Fetch categories from Supabase
+  const { data: categories, isLoading: isLoadingCategories } = useSupabaseQuery<any[]>(
+    async () => {
+      const { data, error } = await supabase
+        .from('categorias')
+        .select('id, nome')
+        .eq('lanchonete_id', DEFAULT_LANCHONETE_ID);
+        
+      if (error) throw error;
+      
+      // Transform to match the expected format
+      const formattedCategories = data.map(cat => ({
+        id: cat.id,
+        name: cat.nome,
+        icon: getIconForCategory(cat.nome)
+      }));
+      
+      return { data: formattedCategories, error: null };
+    },
+    []
+  );
+
+  // Fetch products from Supabase
+  const { data: products, isLoading: isLoadingProducts } = useSupabaseQuery<any[]>(
+    async () => {
+      const { data, error } = await supabase
+        .from('produtos')
+        .select(`
+          id, 
+          nome, 
+          descricao, 
+          preco_base, 
+          imagem_url, 
+          categoria_id, 
+          ativo,
+          variacoes:variacoes_produto (
+            id,
+            nome,
+            adicional_preco
+          )
+        `)
+        .eq('lanchonete_id', DEFAULT_LANCHONETE_ID)
+        .eq('ativo', true);
+        
+      if (error) throw error;
+      
+      // Transform to match the expected format
+      const formattedProducts = data.map(product => ({
+        id: product.id,
+        name: product.nome,
+        description: product.descricao || "",
+        price: product.preco_base,
+        image: product.imagem_url || "https://via.placeholder.com/400",
+        category: product.categoria_id,
+        available: product.ativo,
+        variations: product.variacoes?.map((v: any) => ({
+          id: v.id,
+          name: v.nome,
+          price: product.preco_base + v.adicional_preco
+        })) || []
+      }));
+      
+      return { data: formattedProducts, error: null };
+    },
+    []
+  );
+
+  // Function to get icon for category based on name
+  const getIconForCategory = (name: string): string => {
+    const lowerName = name.toLowerCase();
+    if (lowerName.includes('hambúrguer') || lowerName.includes('burger')) return '🍔';
+    if (lowerName.includes('pizza')) return '🍕';
+    if (lowerName.includes('bebida') || lowerName.includes('drink')) return '🥤';
+    if (lowerName.includes('sobremesa') || lowerName.includes('dessert')) return '🍰';
+    if (lowerName.includes('petisco') || lowerName.includes('snack')) return '🍟';
+    return '🍽️';
+  };
+
+  // Load cart data from Supabase on component mount
+  useEffect(() => {
+    const fetchCart = async () => {
+      try {
+        const { items, error } = await loadCart(user?.id || null);
+        if (!error) {
+          setCartItems(items);
+        } else {
+          console.error("Error loading cart:", error);
+        }
+      } catch (error) {
+        console.error("Error in fetchCart:", error);
+      }
+    };
+    
+    fetchCart();
+  }, [user]);
+
+  // Transfer cart when user logs in
+  useEffect(() => {
+    if (user) {
+      transferCartToUser(user.id);
+    }
+  }, [user]);
+
+  // Save cart to Supabase whenever it changes
+  useEffect(() => {
+    if (cartItems.length > 0) {
+      saveCart(cartItems, user?.id || null);
+    }
+  }, [cartItems, user]);
 
   // Filter products by category
   const filteredProducts = useMemo(() => {
+    if (!products) return [];
     if (activeCategory === "all") return products;
     return products.filter(product => product.category === activeCategory);
-  }, [activeCategory]);
+  }, [activeCategory, products]);
 
   // Get cart item count
   const cartItemsCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
@@ -123,14 +243,68 @@ const Index = () => {
     setIsCheckoutOpen(true);
   };
 
-  const handleOrderComplete = () => {
-    setIsCheckoutOpen(false);
-    setCartItems([]);
-    toast({
-      title: "Pedido confirmado!",
-      description: "Seu pedido foi enviado para a cozinha",
-    });
+  const handleOrderComplete = async (orderData: any) => {
+    try {
+      // Create order in database
+      const { data: order, error: orderError } = await supabase
+        .from('pedidos')
+        .insert([{
+          cliente_id: user?.id || null,
+          lanchonete_id: DEFAULT_LANCHONETE_ID,
+          total: cartItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0),
+          status: 'recebido',
+          endereco_entrega: orderData.endereco
+        }])
+        .select();
+      
+      if (orderError) throw orderError;
+      
+      // Create order items
+      const orderItems = cartItems.map(item => ({
+        pedido_id: order[0].id,
+        produto_id: item.product.id,
+        quantidade: item.quantity,
+        preco_unitario: item.product.price,
+        variacoes: item.product.variations || null
+      }));
+      
+      const { error: itemsError } = await supabase
+        .from('itens_pedido')
+        .insert(orderItems);
+      
+      if (itemsError) throw itemsError;
+      
+      // Clear cart after successful order
+      setCartItems([]);
+      await clearCart(user?.id || null);
+      
+      setIsCheckoutOpen(false);
+      
+      toast({
+        title: "Pedido confirmado!",
+        description: "Seu pedido foi enviado para a cozinha",
+      });
+    } catch (error) {
+      console.error("Error completing order:", error);
+      toast({
+        title: "Erro no pedido",
+        description: "Não foi possível completar o pedido. Por favor, tente novamente.",
+        variant: "destructive"
+      });
+    }
   };
+
+  // Show loading state while fetching data
+  if (isLoadingCategories || isLoadingProducts) {
+    return (
+      <div className="min-h-screen bg-gradient-warm flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          <p className="text-lg">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-warm pb-20 md:pb-0">
@@ -141,7 +315,7 @@ const Index = () => {
       />
 
       <CategoryFilter
-        categories={categories}
+        categories={categories || mockCategories}
         activeCategory={activeCategory}
         onCategoryChange={setActiveCategory}
       />
@@ -150,7 +324,7 @@ const Index = () => {
         <div className="mb-6">
           <h2 className="text-2xl font-bold mb-2">
             {activeCategory === "all" ? "Cardápio Completo" : 
-             categories.find(cat => cat.id === activeCategory)?.name || "Produtos"}
+             categories?.find(cat => cat.id === activeCategory)?.name || "Produtos"}
           </h2>
           <p className="text-muted-foreground">
             Escolha seus itens favoritos e monte seu pedido
