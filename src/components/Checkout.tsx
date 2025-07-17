@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { CartItem } from "./Cart";
+import { CartItem } from "@/types/schema";
 import { useToast } from "@/hooks/use-toast";
 
 interface CheckoutProps {

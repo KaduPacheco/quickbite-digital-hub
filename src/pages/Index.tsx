@@ -263,14 +263,29 @@ const Index = () => {
       
       if (orderError) throw orderError;
       
-      // Create order items
-      const orderItems = cartItems.map(item => ({
-        pedido_id: order[0].id,
-        produto_id: item.product.id,
-        quantidade: item.quantity,
-        preco_unitario: item.product.price,
-        variacoes: item.variations || null
-      }));
+      // Create order items - Convert complex objects to JSON-serializable format
+      const orderItems = cartItems.map(item => {
+        // Convert variations to a format compatible with JSON
+        let serializedVariations = null;
+        if (item.variations) {
+          serializedVariations = {
+            selectedVariation: item.variations.selectedVariation ? {
+              id: item.variations.selectedVariation.id,
+              name: item.variations.selectedVariation.name,
+              price: item.variations.selectedVariation.price
+            } : undefined,
+            selectedAdditionals: item.variations.selectedAdditionals
+          };
+        }
+        
+        return {
+          pedido_id: order[0].id,
+          produto_id: item.product.id,
+          quantidade: item.quantity,
+          preco_unitario: item.product.price,
+          variacoes: serializedVariations
+        };
+      });
       
       const { error: itemsError } = await supabase
         .from('itens_pedido')

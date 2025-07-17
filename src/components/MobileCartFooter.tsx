@@ -1,7 +1,7 @@
 
 import { ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { CartItem } from "./Cart";
+import { CartItem } from "@/types/schema";
 
 interface MobileCartFooterProps {
   items: CartItem[];
