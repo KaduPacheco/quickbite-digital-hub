@@ -1,4 +1,3 @@
-
 // Product types
 export interface Product {
   id: string;
@@ -21,7 +20,10 @@ export interface ProductVariation {
 export interface CartItem {
   product: Product;
   quantity: number;
-  variations?: any;
+  variations?: {
+    selectedVariation?: ProductVariation;
+    selectedAdditionals?: any[];
+  };
 }
 
 // Order types

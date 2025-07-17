@@ -1,15 +1,16 @@
-
-import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useState, useEffect } from 'react';
+import { Tables } from '@/integrations/supabase/types';
 import { RealtimeChannel, User, Session } from '@supabase/supabase-js';
 
-// Generic hook for Supabase queries
-export const useSupabaseQuery = <T extends any>(
-  query: () => Promise<{ data: T | null; error: any }>,
+// Modify the generic query hook to use more specific types
+export const useSupabaseQuery = <T extends keyof Tables>(
+  query: (table: T) => Promise<{ data: Tables[T]['Row'][] | null; error: any }>,
+  table: T,
   dependencies: any[] = []
 ) => {
-  const [data, setData] = useState<T | null>(null);
+  const [data, setData] = useState<Tables[T]['Row'][] | null>(null);
   const [error, setError] = useState<any>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const { toast } = useToast();
@@ -18,13 +19,13 @@ export const useSupabaseQuery = <T extends any>(
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const { data, error } = await query();
+        const result = await query(table);
         
-        if (error) {
-          throw error;
+        if (result.error) {
+          throw result.error;
         }
         
-        setData(data);
+        setData(result.data);
       } catch (err) {
         setError(err);
         console.error('Error fetching data:', err);
@@ -42,7 +43,7 @@ export const useSupabaseQuery = <T extends any>(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, dependencies);
 
-  return { data, error, isLoading, refetch: () => query().then(({ data }) => setData(data)) };
+  return { data, error, isLoading, refetch: () => fetchData() };
 };
 
 // Hook for real-time Supabase subscriptions

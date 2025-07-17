@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from "react";
 import { Header } from "@/components/Header";
 import { CategoryFilter } from "@/components/CategoryFilter";
@@ -243,7 +242,10 @@ const Index = () => {
     setIsCheckoutOpen(true);
   };
 
-  const handleOrderComplete = async (orderData: any) => {
+  const handleOrderComplete = async (orderData: {
+    endereco: string;
+    // Add any other required fields
+  }) => {
     try {
       // Create order in database
       const { data: order, error: orderError } = await supabase
