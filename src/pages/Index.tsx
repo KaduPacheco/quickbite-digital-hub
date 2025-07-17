@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useMemo } from "react";
 import { Header } from "@/components/Header";
 import { CategoryFilter } from "@/components/CategoryFilter";
@@ -205,7 +206,11 @@ const Index = () => {
         );
       }
       
-      return [...prev, { product: customizedProduct, quantity, variations: { selectedVariation, selectedAdditionals } }];
+      return [...prev, { 
+        product: customizedProduct, 
+        quantity, 
+        variations: { selectedVariation, selectedAdditionals } 
+      }];
     });
 
     toast({

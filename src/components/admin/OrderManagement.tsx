@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -73,7 +72,7 @@ export const OrderManagement = () => {
   const [orders, setOrders] = useState<Order[]>([]);
 
   // Fetch orders from Supabase
-  const { data: ordersData, isLoading, error, refetch } = useSupabaseQuery<any[]>(
+  const { data: ordersData, isLoading, error, refetch } = useSupabaseQuery<Order[]>(
     async () => {
       if (!lanchoneteId) return { data: null, error: new Error("Lanchonete ID not found") };
       

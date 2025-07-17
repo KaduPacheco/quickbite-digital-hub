@@ -1,49 +1,49 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
 import { Tables } from '@/integrations/supabase/types';
 import { RealtimeChannel, User, Session } from '@supabase/supabase-js';
 
-// Modify the generic query hook to use more specific types
-export const useSupabaseQuery = <T extends keyof Tables>(
-  query: (table: T) => Promise<{ data: Tables[T]['Row'][] | null; error: any }>,
-  table: T,
+// Generic hook for Supabase queries
+export const useSupabaseQuery = <T extends any>(
+  query: () => Promise<{ data: T | null; error: any }>,
   dependencies: any[] = []
 ) => {
-  const [data, setData] = useState<Tables[T]['Row'][] | null>(null);
+  const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<any>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const { toast } = useToast();
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
-      try {
-        const result = await query(table);
-        
-        if (result.error) {
-          throw result.error;
-        }
-        
-        setData(result.data);
-      } catch (err) {
-        setError(err);
-        console.error('Error fetching data:', err);
-        toast({
-          title: 'Erro ao carregar dados',
-          description: 'Não foi possível carregar os dados. Por favor, tente novamente.',
-          variant: 'destructive',
-        });
-      } finally {
-        setIsLoading(false);
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      const result = await query();
+      
+      if (result.error) {
+        throw result.error;
       }
-    };
+      
+      setData(result.data);
+    } catch (err) {
+      setError(err);
+      console.error('Error fetching data:', err);
+      toast({
+        title: 'Erro ao carregar dados',
+        description: 'Não foi possível carregar os dados. Por favor, tente novamente.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, dependencies);
 
-  return { data, error, isLoading, refetch: () => fetchData() };
+  return { data, error, isLoading, refetch: fetchData };
 };
 
 // Hook for real-time Supabase subscriptions

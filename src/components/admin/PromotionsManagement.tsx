@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Plus, Percent, Calendar, DollarSign, Edit, Trash2, Copy, Loader2, AlertCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
