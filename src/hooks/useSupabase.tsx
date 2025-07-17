@@ -101,7 +101,7 @@ export const useSupabaseSubscription = <T extends any>(
 
 // Hook for inserting data into Supabase
 export const useSupabaseInsert = <T extends Record<string, any>>(
-  table: string
+  tableName: keyof Tables
 ) => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<any>(null);
@@ -113,7 +113,7 @@ export const useSupabaseInsert = <T extends Record<string, any>>(
 
     try {
       const { data: result, error } = await supabase
-        .from(table)
+        .from(tableName as string)
         .insert(data as any)
         .select();
 
@@ -144,7 +144,7 @@ export const useSupabaseInsert = <T extends Record<string, any>>(
 
 // Hook for updating data in Supabase
 export const useSupabaseUpdate = <T extends Record<string, any>>(
-  table: string
+  tableName: keyof Tables
 ) => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<any>(null);
@@ -156,7 +156,7 @@ export const useSupabaseUpdate = <T extends Record<string, any>>(
 
     try {
       const { data: result, error } = await supabase
-        .from(table)
+        .from(tableName as string)
         .update(data as any)
         .eq('id', id)
         .select();
@@ -188,7 +188,7 @@ export const useSupabaseUpdate = <T extends Record<string, any>>(
 
 // Hook for deleting data from Supabase
 export const useSupabaseDelete = (
-  table: string
+  tableName: keyof Tables
 ) => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<any>(null);
@@ -200,7 +200,7 @@ export const useSupabaseDelete = (
 
     try {
       const { error } = await supabase
-        .from(table)
+        .from(tableName as string)
         .delete()
         .eq('id', id);
 

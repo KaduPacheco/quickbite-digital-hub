@@ -12,7 +12,7 @@ interface CheckoutProps {
   items: CartItem[];
   isOpen: boolean;
   onClose: () => void;
-  onOrderComplete: () => void;
+  onOrderComplete: (orderData: { endereco: string }) => void;
 }
 
 interface Coupon {
@@ -123,13 +123,11 @@ export const Checkout = ({ items, isOpen, onClose, onOrderComplete }: CheckoutPr
       return;
     }
 
-    // Simular processamento do pedido
-    toast({
-      title: "Pedido realizado com sucesso!",
-      description: "Você receberá atualizações por WhatsApp",
-    });
+    // Create complete address string
+    const endereco = `${deliveryAddress.street}, ${deliveryAddress.number}${deliveryAddress.complement ? ` - ${deliveryAddress.complement}` : ''}, ${deliveryAddress.neighborhood}, ${deliveryAddress.city} - ${deliveryAddress.zipCode}`;
 
-    onOrderComplete();
+    // Call the order completion handler with the address
+    onOrderComplete({ endereco });
   };
 
   return (
