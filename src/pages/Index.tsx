@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Header } from "@/components/Header";
 import { CategoryFilter } from "@/components/CategoryFilter";
 import { ProductCard, Product } from "@/components/ProductCard";
-import { Cart, CartItem } from "@/components/Cart";
+import { Cart } from "@/components/Cart";
 import { ProductModal } from "@/components/ProductModal";
 import { Checkout } from "@/components/Checkout";
 import { MobileCartFooter } from "@/components/MobileCartFooter";
@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { loadCart, saveCart, clearCart, transferCartToUser } from "@/services/CartService";
 import { Loader2 } from "lucide-react";
+import { CartItem } from "@/types/schema";
 
 // Default lanchonete ID for demo purposes - in production, this would be set dynamically
 const DEFAULT_LANCHONETE_ID = "your-lanchonete-id-here";

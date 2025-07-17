@@ -1,3 +1,4 @@
+
 // Product types
 export interface Product {
   id: string;
@@ -21,7 +22,7 @@ export interface CartItem {
   product: Product;
   quantity: number;
   variations?: {
-    selectedVariation?: any;
+    selectedVariation?: ProductVariation;
     selectedAdditionals?: any[];
   };
 }
