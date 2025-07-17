@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { LogOut, Package, ShoppingCart, BarChart3, Settings, Users, TrendingUp, Tag, Warehouse, Loader2 } from "lucide-react";
+import { LogOut, Package, ShoppingCart, BarChart3, Settings, Users, TrendingUp, Tag, Warehouse, Loader2, AlertTriangle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -15,12 +15,15 @@ import { AdminLogin } from "@/pages/AdminLogin";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { LanchoneteAssociationForm } from "@/components/auth/LanchoneteAssociationForm";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const Admin = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const { user, lanchoneteId, signOut, isLoading } = useAuth();
+  const { user, lanchoneteId, userType, signOut, isLoading } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [showAssociationForm, setShowAssociationForm] = useState(false);
 
   useEffect(() => {
     // Check authentication status
@@ -47,6 +50,14 @@ const Admin = () => {
     navigate("/");
   };
 
+  const handleAssociationSuccess = () => {
+    setShowAssociationForm(false);
+    toast({
+      title: "Associação concluída",
+      description: "Você foi associado à lanchonete com sucesso",
+    });
+  };
+
   // Show loading state while checking authentication
   if (isLoading) {
     return (
@@ -64,18 +75,61 @@ const Admin = () => {
     return <AdminLogin onLogin={handleLogin} />;
   }
 
-  // If authenticated but no lanchoneteId, show access denied
-  if (!lanchoneteId) {
+  // Check if user type is admin or employee
+  const isAdminOrEmployee = userType === 'admin' || userType === 'funcionario';
+  
+  // If authenticated but no lanchoneteId or wrong user type, show access denied
+  if (!lanchoneteId || !isAdminOrEmployee) {
     return (
       <div className="min-h-screen bg-gradient-warm flex items-center justify-center p-4">
-        <Card className="max-w-md w-full p-6 text-center">
-          <CardContent className="pt-6 space-y-4">
-            <h2 className="text-2xl font-bold">Acesso Negado</h2>
-            <p>
-              Você não tem permissão para acessar o painel administrativo. 
-              Sua conta não está associada a nenhuma lanchonete.
-            </p>
-            <Button onClick={handleLogout}>Sair</Button>
+        <Card className="max-w-md w-full p-6">
+          <CardContent className="pt-6 space-y-6">
+            <div className="flex flex-col items-center text-center gap-4">
+              <div className="rounded-full bg-destructive/10 p-3">
+                <AlertTriangle className="h-6 w-6 text-destructive" />
+              </div>
+              <h2 className="text-2xl font-bold">Acesso Negado</h2>
+              <p className="text-muted-foreground">
+                Você não tem permissão para acessar o painel administrativo. 
+                {!lanchoneteId && "Sua conta não está associada a nenhuma lanchonete."}
+                {!isAdminOrEmployee && lanchoneteId && "Seu tipo de usuário não tem permissão para acessar o painel administrativo."}
+              </p>
+            </div>
+            
+            {!lanchoneteId && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Conta não vinculada</AlertTitle>
+                <AlertDescription>
+                  Para acessar o painel administrativo, sua conta precisa estar vinculada a uma lanchonete.
+                </AlertDescription>
+              </Alert>
+            )}
+            
+            <div className="flex flex-col gap-2">
+              {!lanchoneteId && (
+                <Button 
+                  onClick={() => setShowAssociationForm(true)} 
+                  className="w-full"
+                  variant="default"
+                >
+                  Associar à Lanchonete
+                </Button>
+              )}
+              <Button onClick={handleLogout} variant={!lanchoneteId ? "outline" : "default"} className="w-full">
+                <LogOut className="h-4 w-4 mr-2" />
+                Sair
+              </Button>
+            </div>
+            
+            {showAssociationForm && (
+              <div className="mt-6">
+                <LanchoneteAssociationForm 
+                  onSuccess={handleAssociationSuccess}
+                  onCancel={() => setShowAssociationForm(false)}
+                />
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

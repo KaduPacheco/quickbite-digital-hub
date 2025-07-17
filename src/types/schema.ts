@@ -76,3 +76,15 @@ export interface DbCategory {
   created_at: string;
   updated_at: string;
 }
+
+// Promotion types
+export interface Promotion {
+  id: string;
+  title: string;
+  code: string;
+  type: "percentual" | "fixo";
+  value: number;
+  minimumValue?: number;
+  active: boolean;
+  validUntil: string;
+}
