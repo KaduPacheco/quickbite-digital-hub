@@ -28,28 +28,37 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const { toast } = useToast();
 
   useEffect(() => {
+    let mounted = true;
     let timeoutId: NodeJS.Timeout;
+    let subscription: any = null;
     
-    const initializeAuth = async () => {
+    const initializeAuth = () => {
       try {
         console.log('Initializing authentication...');
         
-        // Set timeout for initialization (increased to 15 seconds)
+        // Set timeout for initialization
         timeoutId = setTimeout(() => {
-          console.error('Authentication initialization timeout');
-          setInitializationError('Timeout ao conectar com o servidor');
-          setIsLoading(false);
-          toast({
-            title: "Erro de Conexão",
-            description: "Erro ao conectar com o servidor. Verifique sua conexão ou tente novamente mais tarde.",
-            variant: "destructive",
-          });
-        }, 15000);
+          if (mounted) {
+            console.error('Authentication initialization timeout');
+            setInitializationError('Timeout ao conectar com o servidor');
+            setIsLoading(false);
+            toast({
+              title: "Erro de Conexão",
+              description: "Erro ao conectar com o servidor. Verifique sua conexão ou tente novamente mais tarde.",
+              variant: "destructive",
+            });
+          }
+        }, 10000);
 
         // Set up auth state change listener
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+        const { data: authData } = supabase.auth.onAuthStateChange(async (_event, session) => {
+          if (!mounted) return;
+          
           console.log('Auth state changed:', _event, session?.user?.id);
-          clearTimeout(timeoutId);
+          
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+          }
           
           setUser(session?.user || null);
           if (session?.user) {
@@ -61,53 +70,67 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           }
         });
 
-        // Check for existing session with proper error handling
-        try {
-          const { data: { session }, error } = await supabase.auth.getSession();
+        subscription = authData.subscription;
+
+        // Check for existing session
+        supabase.auth.getSession().then(({ data: { session }, error }) => {
+          if (!mounted) return;
+          
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+          }
           
           if (error) {
             console.error('Error getting session:', error);
-            throw error;
+            setIsLoading(false);
+            return;
           }
           
           console.log('Session check completed:', session?.user?.id);
           
           if (session?.user) {
             setUser(session.user);
-            await fetchUserProfile(session.user.id);
+            fetchUserProfile(session.user.id);
           } else {
             setIsLoading(false);
           }
+        }).catch(error => {
+          if (!mounted) return;
           
-          clearTimeout(timeoutId);
-        } catch (sessionError) {
-          console.error('Session retrieval failed:', sessionError);
+          console.error('Session retrieval failed:', error);
           setIsLoading(false);
-          clearTimeout(timeoutId);
-        }
-        
-        return () => {
-          subscription.unsubscribe();
-          clearTimeout(timeoutId);
-        };
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+          }
+        });
         
       } catch (error) {
         console.error('Authentication initialization error:', error);
-        clearTimeout(timeoutId);
-        setInitializationError('Erro ao inicializar autenticação');
-        setIsLoading(false);
-        toast({
-          title: "Erro de Inicialização",
-          description: "Erro ao conectar com o servidor. Verifique sua conexão ou tente novamente mais tarde.",
-          variant: "destructive",
-        });
+        if (mounted) {
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+          }
+          setInitializationError('Erro ao inicializar autenticação');
+          setIsLoading(false);
+          toast({
+            title: "Erro de Inicialização",
+            description: "Erro ao conectar com o servidor. Verifique sua conexão ou tente novamente mais tarde.",
+            variant: "destructive",
+          });
+        }
       }
     };
 
     initializeAuth();
     
     return () => {
-      if (timeoutId) clearTimeout(timeoutId);
+      mounted = false;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      if (subscription) {
+        subscription.unsubscribe();
+      }
     };
   }, [toast]);
 
