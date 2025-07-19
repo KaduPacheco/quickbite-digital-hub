@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from "@/hooks/use-toast";
@@ -24,61 +25,37 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [userType, setUserType] = useState<"admin" | "funcionario" | "cliente" | null>(null);
   const [lanchoneteId, setLanchoneteId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [initializationError, setInitializationError] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     let mounted = true;
-    let timeoutId: NodeJS.Timeout;
-    let subscription: any = null;
     
     const initializeAuth = () => {
+      console.log('Initializing authentication...');
+      
       try {
-        console.log('Initializing authentication...');
-        
-        // Set timeout for initialization
-        timeoutId = setTimeout(() => {
-          if (mounted) {
-            console.error('Authentication initialization timeout');
-            setInitializationError('Timeout ao conectar com o servidor');
-            setIsLoading(false);
-            toast({
-              title: "Erro de Conexão",
-              description: "Erro ao conectar com o servidor. Verifique sua conexão ou tente novamente mais tarde.",
-              variant: "destructive",
-            });
+        // Set up the auth state listener first
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          (event, session) => {
+            if (!mounted) return;
+            
+            console.log('Auth state changed:', event, session?.user?.id);
+            
+            setUser(session?.user || null);
+            
+            if (session?.user) {
+              fetchUserProfile(session.user.id);
+            } else {
+              setUserType(null);
+              setLanchoneteId(null);
+              setIsLoading(false);
+            }
           }
-        }, 10000);
+        );
 
-        // Set up auth state change listener
-        const { data: authData } = supabase.auth.onAuthStateChange(async (_event, session) => {
-          if (!mounted) return;
-          
-          console.log('Auth state changed:', _event, session?.user?.id);
-          
-          if (timeoutId) {
-            clearTimeout(timeoutId);
-          }
-          
-          setUser(session?.user || null);
-          if (session?.user) {
-            await fetchUserProfile(session.user.id);
-          } else {
-            setUserType(null);
-            setLanchoneteId(null);
-            setIsLoading(false);
-          }
-        });
-
-        subscription = authData.subscription;
-
-        // Check for existing session
+        // Get initial session
         supabase.auth.getSession().then(({ data: { session }, error }) => {
           if (!mounted) return;
-          
-          if (timeoutId) {
-            clearTimeout(timeoutId);
-          }
           
           if (error) {
             console.error('Error getting session:', error);
@@ -86,7 +63,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             return;
           }
           
-          console.log('Session check completed:', session?.user?.id);
+          console.log('Initial session check:', session?.user?.id);
           
           if (session?.user) {
             setUser(session.user);
@@ -96,41 +73,31 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           }
         }).catch(error => {
           if (!mounted) return;
-          
-          console.error('Session retrieval failed:', error);
+          console.error('Session check failed:', error);
           setIsLoading(false);
-          if (timeoutId) {
-            clearTimeout(timeoutId);
-          }
         });
-        
+
+        return () => {
+          subscription.unsubscribe();
+        };
       } catch (error) {
-        console.error('Authentication initialization error:', error);
+        console.error('Auth initialization failed:', error);
         if (mounted) {
-          if (timeoutId) {
-            clearTimeout(timeoutId);
-          }
-          setInitializationError('Erro ao inicializar autenticação');
           setIsLoading(false);
           toast({
             title: "Erro de Inicialização",
-            description: "Erro ao conectar com o servidor. Verifique sua conexão ou tente novamente mais tarde.",
+            description: "Erro ao conectar com o servidor. Recarregue a página.",
             variant: "destructive",
           });
         }
       }
     };
 
-    initializeAuth();
+    const cleanup = initializeAuth();
     
     return () => {
       mounted = false;
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-      if (subscription) {
-        subscription.unsubscribe();
-      }
+      if (cleanup) cleanup();
     };
   }, [toast]);
 
@@ -164,13 +131,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  // Retry initialization function
-  const retryInitialization = () => {
-    setIsLoading(true);
-    setInitializationError(null);
-    window.location.reload();
   };
 
   const createUserProfile = async (userId: string, email: string, name: string, userType: "admin" | "funcionario" | "cliente" = "cliente") => {
@@ -309,24 +269,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     signOut,
     linkUserToLanchonete,
   };
-
-  // Show error state with retry button if initialization failed
-  if (initializationError && !isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-warm">
-        <div className="text-center space-y-4">
-          <h2 className="text-2xl font-bold text-foreground">Erro de Conexão</h2>
-          <p className="text-muted-foreground">Não foi possível conectar com o servidor</p>
-          <button 
-            onClick={retryInitialization}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
-          >
-            Tentar Novamente
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <AuthContext.Provider value={value}>
