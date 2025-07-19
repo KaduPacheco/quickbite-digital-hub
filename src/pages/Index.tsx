@@ -15,8 +15,8 @@ import { loadCart, saveCart, clearCart, transferCartToUser } from "@/services/Ca
 import { Loader2 } from "lucide-react";
 import { CartItem } from "@/types/schema";
 
-// Default lanchonete ID for demo purposes - in production, this would be set dynamically
-const DEFAULT_LANCHONETE_ID = "your-lanchonete-id-here";
+// Use a valid UUID for demo purposes - in production, this would be set dynamically
+const DEFAULT_LANCHONETE_ID = "123e4567-e89b-12d3-a456-426614174000";
 
 const Index = () => {
   const [activeCategory, setActiveCategory] = useState("all");

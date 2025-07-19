@@ -34,7 +34,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       try {
         console.log('Initializing authentication...');
         
-        // Set timeout for initialization
+        // Set timeout for initialization (increased to 15 seconds)
         timeoutId = setTimeout(() => {
           console.error('Authentication initialization timeout');
           setInitializationError('Timeout ao conectar com o servidor');
@@ -44,7 +44,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             description: "Erro ao conectar com o servidor. Verifique sua conexão ou tente novamente mais tarde.",
             variant: "destructive",
           });
-        }, 5000);
+        }, 15000);
 
         // Set up auth state change listener
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
@@ -61,24 +61,30 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           }
         });
 
-        // Check for existing session
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error('Error getting session:', error);
-          throw error;
-        }
-        
-        console.log('Session check completed:', session?.user?.id);
-        
-        if (session?.user) {
-          setUser(session.user);
-          await fetchUserProfile(session.user.id);
-        } else {
+        // Check for existing session with proper error handling
+        try {
+          const { data: { session }, error } = await supabase.auth.getSession();
+          
+          if (error) {
+            console.error('Error getting session:', error);
+            throw error;
+          }
+          
+          console.log('Session check completed:', session?.user?.id);
+          
+          if (session?.user) {
+            setUser(session.user);
+            await fetchUserProfile(session.user.id);
+          } else {
+            setIsLoading(false);
+          }
+          
+          clearTimeout(timeoutId);
+        } catch (sessionError) {
+          console.error('Session retrieval failed:', sessionError);
           setIsLoading(false);
+          clearTimeout(timeoutId);
         }
-        
-        clearTimeout(timeoutId);
         
         return () => {
           subscription.unsubscribe();
